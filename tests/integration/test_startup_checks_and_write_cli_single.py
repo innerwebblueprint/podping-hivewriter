@@ -69,3 +69,35 @@ async def test_startup_checks_and_write_cli_single():
 
     del settings_manager
     assert iri_found
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(180)
+@pytest.mark.slow
+async def test_startup_checks_bad_data():
+    """Catch bad env data during startup"""
+    runner = CliRunner()
+
+    session_uuid = uuid.uuid4()
+    session_uuid_str = str(session_uuid)
+
+    test_name = "cli_fail"
+    iri = f"https://example.com?t={test_name}&v={pv()}&s={session_uuid_str}"
+
+    args = [
+        "--livetest",
+        "--hive-account",
+        "somewrong",
+        "--hive-posting-key",
+        "5JjTdpJPHjup9pyThfgN39BgyKQEN3AzS1soicYwVM6L3hpg8s7",
+        "write",
+        iri,
+    ]
+
+    # Ensure hive env vars are set from .env.test file or this will fail
+
+    # How do I get this to run and wait for it to complete?
+    result = runner.invoke(app, args)
+    await asyncio.sleep(20)
+
+    assert result.exit_code == 0
