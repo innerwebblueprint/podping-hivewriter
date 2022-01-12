@@ -21,6 +21,8 @@ from podping_hivewriter.constants import (
     HIVE_CUSTOM_OP_DATA_MAX_LENGTH,
     STARTUP_FAILED_UNKNOWN_EXIT_CODE,
     STARTUP_OPERATION_ID,
+    STARTUP_FAILED_INVALID_ACCOUNT,
+    STARTUP_FAILED_INVALID_POSTING_KEY_EXIT_CODE
 )
 from podping_hivewriter.exceptions import (
     PodpingCustomJsonPayloadExceeded,
@@ -102,13 +104,15 @@ class PodpingHivewriter(AsyncContext):
                 logging.error(
                     f"Account @{self.server_account} not authorised to send Podpings"
                 )
-        except ValueError as ex:
+        except ValueError:
             logging.error(
                 f"Hive account @{self.server_account} does not exist, "
                 f"check ENV vars and try again",
                 exc_info=True,
             )
-            raise ex
+            logging.error("Exiting")
+            sys.exit(STARTUP_FAILED_INVALID_ACCOUNT)
+
         except Exception as ex:
             logging.error(f"Unknown error occurred: {ex}", exc_info=True)
             raise ex
