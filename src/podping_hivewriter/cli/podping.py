@@ -1,12 +1,23 @@
 import asyncio
+import json
 import logging
-from typing import Optional, List
+import sys
+from typing import List, Optional
 
 import rfc3987
 import typer
+from lighthive.datastructures import Operation
+from lighthive.exceptions import RPCNodeException
 
 from podping_hivewriter import __version__
-from podping_hivewriter.constants import LIVETEST_OPERATION_ID, PODPING_OPERATION_ID
+from podping_hivewriter.constants import (
+    LIVETEST_OPERATION_ID,
+    PODPING_OPERATION_ID,
+    STARTUP_FAILED_INVALID_ACCOUNT,
+    STARTUP_FAILED_INVALID_POSTING_KEY_EXIT_CODE,
+    STARTUP_FAILED_UNKNOWN_EXIT_CODE,
+)
+from podping_hivewriter.hive import get_client
 from podping_hivewriter.podping_hivewriter import PodpingHivewriter
 from podping_hivewriter.podping_settings_manager import PodpingSettingsManager
 
@@ -284,6 +295,37 @@ def callback(
         Config.operation_id = LIVETEST_OPERATION_ID
     else:
         Config.operation_id = PODPING_OPERATION_ID
+
+    # Check the account exists
+    posting_keys = [hive_posting_key]
+    client = get_client(posting_keys=posting_keys)
+    account_exists = client.get_accounts([hive_account])
+    if not account_exists:
+        logging.error(
+            f"Hive account @{hive_account} does not exist, "
+            f"check ENV vars and try again"
+        )
+        logging.error("Exiting")
+        sys.exit(STARTUP_FAILED_INVALID_ACCOUNT)
+    json_obj = {"message": "here"}
+    op = Operation(
+        "custom_json",
+        {
+            "required_auths": [],
+            "required_posting_auths": [hive_account],
+            "id": str(Config.operation_id),
+            "json": json.dumps(json_obj),
+        },
+    )
+    try:
+        tx = client.broadcast_sync(op=op)
+    except RPCNodeException as ex:
+        logging.error(f"{ex}")
+        sys.exit(STARTUP_FAILED_INVALID_POSTING_KEY_EXIT_CODE)
+
+    except Exception as ex:
+        logging.error(f"{ex}")
+        sys.exit(STARTUP_FAILED_UNKNOWN_EXIT_CODE)
 
 
 if __name__ == "__main__":

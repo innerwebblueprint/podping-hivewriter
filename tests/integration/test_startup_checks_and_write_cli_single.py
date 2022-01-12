@@ -10,11 +10,15 @@ from typer.testing import CliRunner
 
 from podping_hivewriter.async_wrapper import sync_to_async
 from podping_hivewriter.cli.podping import app
-from podping_hivewriter.constants import LIVETEST_OPERATION_ID
+from podping_hivewriter.constants import (
+    LIVETEST_OPERATION_ID,
+    STARTUP_FAILED_INVALID_POSTING_KEY_EXIT_CODE,
+)
 from podping_hivewriter.models.hive_operation_id import HiveOperationId
 from podping_hivewriter.models.medium import Medium
 from podping_hivewriter.models.reason import Reason
 from podping_hivewriter.podping_settings_manager import PodpingSettingsManager
+from podping_hivewriter.constants import STARTUP_FAILED_INVALID_ACCOUNT
 
 
 @pytest.mark.asyncio
@@ -93,11 +97,17 @@ async def test_startup_checks_bad_data():
         "write",
         iri,
     ]
-
-    # Ensure hive env vars are set from .env.test file or this will fail
-
-    # How do I get this to run and wait for it to complete?
     result = runner.invoke(app, args)
-    await asyncio.sleep(20)
+    assert result.exit_code == STARTUP_FAILED_INVALID_ACCOUNT
 
-    assert result.exit_code == 0
+    args = [
+        "--livetest",
+        "--hive-account",
+        "podping.test",
+        "--hive-posting-key",
+        "5JjTdpJPHjup9pyThfgN39BgyKQEN3AzS1soicYwVM6L3hpg8s7",
+        "write",
+        iri,
+    ]
+    result = runner.invoke(app, args)
+    assert result.exit_code == STARTUP_FAILED_INVALID_POSTING_KEY_EXIT_CODE

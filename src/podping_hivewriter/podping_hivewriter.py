@@ -21,8 +21,7 @@ from podping_hivewriter.constants import (
     HIVE_CUSTOM_OP_DATA_MAX_LENGTH,
     STARTUP_FAILED_UNKNOWN_EXIT_CODE,
     STARTUP_OPERATION_ID,
-    STARTUP_FAILED_INVALID_ACCOUNT,
-    STARTUP_FAILED_INVALID_POSTING_KEY_EXIT_CODE
+    STARTUP_FAILED_INVALID_POSTING_KEY_EXIT_CODE,
 )
 from podping_hivewriter.exceptions import (
     PodpingCustomJsonPayloadExceeded,
@@ -96,22 +95,13 @@ class PodpingHivewriter(AsyncContext):
             allowed = get_allowed_accounts(
                 self.lighthive_client, settings.control_account
             )
-            # Check the account exists
-            self.lighthive_client.account(self.server_account)
+
             # TODO: Should we periodically check if the account is allowed
             #  and shut down if not?
             if self.server_account not in allowed:
                 logging.error(
                     f"Account @{self.server_account} not authorised to send Podpings"
                 )
-        except ValueError:
-            logging.error(
-                f"Hive account @{self.server_account} does not exist, "
-                f"check ENV vars and try again",
-                exc_info=True,
-            )
-            logging.error("Exiting")
-            sys.exit(STARTUP_FAILED_INVALID_ACCOUNT)
 
         except Exception as ex:
             logging.error(f"Unknown error occurred: {ex}", exc_info=True)
@@ -461,6 +451,13 @@ class PodpingHivewriter(AsyncContext):
                         f"FAILURE CLEARED after {failure_count} retries, {sleep_time}s"
                     )
                 return trx_id, failure_count
+            except RPCNodeException as ex:
+                if (
+                    ex.raw_body["error"]["message"]
+                    == f"missing required posting authority:Missing Posting Authority {self.server_account}"
+                ):
+                    sys.exit(STARTUP_FAILED_INVALID_POSTING_KEY_EXIT_CODE)
+
             except Exception as ex:
                 logging.warning(f"Failed to send {len(iri_set)} IRIs")
                 for iri in iri_set:
