@@ -11,6 +11,7 @@ from lighthive.broadcast.key_objects import PrivateKey
 from podping_hivewriter import __version__
 from podping_hivewriter.constants import (
     LIVETEST_OPERATION_ID,
+    PODPING_OLD_OPERATION_ID,
     PODPING_OPERATION_ID,
     STARTUP_FAILED_INVALID_ACCOUNT,
     STARTUP_FAILED_INVALID_POSTING_KEY_EXIT_CODE,
@@ -77,6 +78,7 @@ class Config:
     status: bool
     ignore_config_updates: bool
     i_know_what_im_doing: bool
+    use_old_operation_id: bool
     debug: bool
 
     operation_id: str
@@ -313,6 +315,12 @@ def callback(
         envvar="PODPING_I_KNOW_WHAT_IM_DOING",
         help="Set this if you really want to listen on all interfaces.",
     ),
+    use_old_operation_id: Optional[bool] = typer.Option(
+        False,
+        "--use-old-operation-id",
+        envvar="PODPING_USE_OLD_OPERATION_ID",
+        help="Use the old operation_id of `podping` instead of the new `pp_` format.",
+    ),
     debug: Optional[bool] = typer.Option(
         False,
         envvar="PODPING_DEBUG",
@@ -330,6 +338,7 @@ def callback(
     Config.status = status
     Config.ignore_config_updates = ignore_config_updates
     Config.i_know_what_im_doing = i_know_what_im_doing
+    Config.use_old_operation_id = use_old_operation_id
     Config.debug = debug
 
     logging.basicConfig(
@@ -340,6 +349,8 @@ def callback(
 
     if Config.livetest:
         Config.operation_id = LIVETEST_OPERATION_ID
+    elif Config.use_old_operation_id:
+        Config.operation_id = PODPING_OLD_OPERATION_ID
     else:
         Config.operation_id = PODPING_OPERATION_ID
 

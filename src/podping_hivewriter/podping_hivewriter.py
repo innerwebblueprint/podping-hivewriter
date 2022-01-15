@@ -19,6 +19,7 @@ from podping_hivewriter.async_context import AsyncContext
 from podping_hivewriter.async_wrapper import sync_to_async
 from podping_hivewriter.constants import (
     HIVE_CUSTOM_OP_DATA_MAX_LENGTH,
+    PODPING_OLD_OPERATION_ID,
     STARTUP_FAILED_INVALID_POSTING_KEY_EXIT_CODE,
     STARTUP_FAILED_UNKNOWN_EXIT_CODE,
     STARTUP_OPERATION_ID,
@@ -376,6 +377,13 @@ class PodpingHivewriter(AsyncContext):
         self, payload: dict, hive_operation_id: Union[HiveOperationId, str]
     ) -> None:
         """Build and send an operation to the blockchain"""
+        # Maintain backward compatability until switch to new operation_ids
+        if (
+            isinstance(hive_operation_id, HiveOperationId)
+            and hive_operation_id.podping == PODPING_OLD_OPERATION_ID
+        ):
+            hive_operation_id = "podping"
+
         try:
             op, size_of_json = await self.construct_operation(
                 payload, hive_operation_id
